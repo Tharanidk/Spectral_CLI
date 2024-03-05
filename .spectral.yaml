@@ -1,0 +1,10 @@
+rules:
+  transport-http-or-https:
+    description: Transport should be either 'http' or 'https'.
+    message: "{{property}} should contain either 'http' or 'https'."
+    severity: error
+    given: $.data.transport[*]
+    then:
+      function: pattern
+      functionOptions:
+        match: "^(http|https)$"
