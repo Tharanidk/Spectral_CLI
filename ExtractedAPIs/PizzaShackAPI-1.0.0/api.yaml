@@ -1,7 +1,7 @@
 type: api
 version: v4.3.0
 data:
-  id: dd7785bf-d22f-4fad-8f0d-e4b42d929ae0
+  id: 5e9a7d6f-d95a-49e1-8876-978f41628576
   name: PizzaShackAPI
   description: This is a simple API for Pizza Shack online pizza delivery store.
   context: /pizzashack
@@ -21,19 +21,19 @@ data:
    - http
    - https
   tags:
+   - ball
    - shack
    - pizza
-   - hut
+   - admin
+   - api
+   - dog
   policies:
-   - Silver
-   - Gold
    - Unlimited
   authorizationHeader: Authorization
   apiKeyHeader: ApiKey
   securityScheme:
-   - oauth2
    - oauth_basic_auth_api_key_mandatory
-   - basic_auth
+   - api_key
   visibility: PUBLIC
   visibleRoles: []
   visibleTenants: []
@@ -73,9 +73,9 @@ data:
     secret: ""
     signingAlgorithm: SHA1
     signatureHeader: x-hub-signature
-  createdTime: "1708355543459"
-  lastUpdatedTimestamp: "1708493598665"
-  lastUpdatedTime: 2024-02-21 11:03:18.665
+  createdTime: "1709628470494"
+  lastUpdatedTimestamp: "1709705509251"
+  lastUpdatedTime: 2024-03-06 11:41:49.251
   endpointConfig:
     endpoint_type: http
     sandbox_endpoints:
@@ -145,9 +145,7 @@ data:
       request: []
       response: []
       fault: []
-  categories:
-   - apicategory02
-   - apicategory01
+  categories: []
   keyManagers:
    - all
   advertiseInfo:

@@ -62,8 +62,7 @@ paths:
       x-throttling-tier: Unlimited
       x-wso2-application-security:
         security-types:
-         - oauth2
-         - basic_auth
+         - api_key
         optional: false
   /menu:
     get:
@@ -90,8 +89,7 @@ paths:
       x-throttling-tier: Unlimited
       x-wso2-application-security:
         security-types:
-         - oauth2
-         - basic_auth
+         - api_key
         optional: false
   /order/{orderId}:
     get:
@@ -133,8 +131,7 @@ paths:
       x-throttling-tier: Unlimited
       x-wso2-application-security:
         security-types:
-         - oauth2
-         - basic_auth
+         - api_key
         optional: false
     put:
       description: Update an existing Order
@@ -190,8 +187,7 @@ paths:
       x-throttling-tier: Unlimited
       x-wso2-application-security:
         security-types:
-         - oauth2
-         - basic_auth
+         - api_key
         optional: false
     delete:
       description: Delete an existing Order
@@ -222,8 +218,7 @@ paths:
       x-throttling-tier: Unlimited
       x-wso2-application-security:
         security-types:
-         - oauth2
-         - basic_auth
+         - api_key
         optional: false
 components:
   schemas:
@@ -309,8 +304,8 @@ components:
         implicit:
           authorizationUrl: https://test.com
           scopes: {}
-x-wso2-auth-header: Authorization
 x-wso2-api-key-header: ApiKey
+x-wso2-auth-header: Authorization
 x-wso2-cors:
   corsConfigurationEnabled: false
   accessControlAllowOrigins:
@@ -344,8 +339,7 @@ x-wso2-transports:
  - https
 x-wso2-application-security:
   security-types:
-   - oauth2
-   - basic_auth
+   - api_key
   optional: false
 x-wso2-response-cache:
   enabled: false

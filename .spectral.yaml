@@ -1,10 +1,10 @@
 rules:
-  transport-http-or-https:
-    description: Transport should be either 'http' or 'https'.
-    message: "{{property}} should contain either 'http' or 'https'."
+  visibility:
+    description: API Tags'.
+    message: "should be defined values."
     severity: error
-    given: $.data.transport[*]
+    given: $.data.tags[*]
     then:
       function: pattern
       functionOptions:
-        match: "^(http|https)$"
+        match: "^(shack|dog|cat)$"
