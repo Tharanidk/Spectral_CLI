@@ -1,9 +1,0 @@
-type: document
-version: v4.3.0
-data:
-  documentId: d88edabb-cdc7-43fa-8d73-ece135e7d3ab
-  name: doc1
-  type: HOWTO
-  summary: this is document 01
-  sourceType: INLINE
-  visibility: API_LEVEL

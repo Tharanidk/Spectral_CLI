@@ -1,0 +1,63 @@
+rules:
+#Governance on Access control for the API
+  access-control-check:
+    description: "APIs must have access control."
+    message: "APIs should not use 'NONE' as the access control option."
+    severity: error
+    given: "$.data"
+    then:
+      field: "accessControl"
+      function: pattern
+      functionOptions:
+        notMatch: "^NONE$"
+  #Governance on API naming / Description
+  api-naming:
+    description: "API names must follow PascalCase naming convention."
+    message: "API name does not follow the PascalCase naming convention."
+    severity: error
+    given: "$.data"
+    then:
+      field: "name"
+      function: pattern
+      functionOptions:
+        match: "^[A-Z][a-z]+(?:[A-Z][a-z]+)*$"
+  api-description-length:
+    description: "APIs must have a comprehensive description."
+    message: "API description is missing or too short."
+    severity: error
+    given: "$.data"
+    then:
+      field: "description"
+      function: length
+      functionOptions:
+        min: 30
+  #API security Governance
+  oauth2-security-check:
+    description: "APIs must contain OAuth2 security."
+    message: "APIs should use OAuth2 for security"
+    severity: error
+    given: "$.data.securityScheme"
+    then:
+      function: schema #spectral use JSON schema to validate the given field
+      functionOptions:
+        schema:
+          type: array
+          items:
+            type: string
+          contains:
+            const: "oauth2"
+  #Governance on API category and tags
+  api-category-mandatory:
+    description: "APIs must contain API categories."
+    message: "APIs should contain at leaset one API category"
+    severity: error
+    given: "$.data.categories"
+    then:
+      function: truthy
+  tags-mandatory:
+    description: "APIs must contain tags"
+    message: "APIs should have at leaset one tag"
+    severity: error
+    given: "$.data.tags"
+    then:
+      function: truthy

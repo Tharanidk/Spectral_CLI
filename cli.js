@@ -8,15 +8,21 @@ const { Spectral } = require('@stoplight/spectral-core');
 const { bundleAndLoadRuleset } = require('@stoplight/spectral-ruleset-bundler/with-loader');
 const { fetch } = require('@stoplight/spectral-runtime');
 const https = require('https');
+const { timeStamp } = require('console');
 
 program
   .version('1.0.0')
   .requiredOption('-t, --token <type>', 'Bearer token')
   .command('validate')
+  .description('Validate APIs')
+  .option('--api <apiName>', 'Validate a specific API by name')
+  .option('--all', 'Validate all APIs', false) // default value for --all is false
+  .action(async (options) => {
+    await main(options).catch(console.error);
+  });
 
-program.parse(process.argv); // Parse the command line arguments
-
-const userOptions = program.opts();
+// Parse the command line arguments
+program.parse(process.argv);
 
 async function getApiDetails(token) {
   return new Promise((resolve, reject) => {
@@ -51,76 +57,116 @@ async function getApiDetails(token) {
     });
     getApis.on('error', error => {
       console.error('Error:', error);
+      reject(error);
     });
 
     getApis.end();
   });
 }
 
-async function exportApis(apiDetails, token) {
-  return new Promise((resolve, reject) => {
-    const exportAPI = {
-      hostname: '127.0.0.1',
-      port: 9443,
-      path: `/api/am/publisher/v4/apis/export?apiId=${apiDetails[1].id}&name=${apiDetails[1].name}&version=${apiDetails[1].version}&provider=${apiDetails[1].provider}&format=YAML`,
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      rejectUnauthorized: false // -k option
-    };
+async function exportApis(apiDetails, token, apiOption) {
+  console.log(apiOption);
+  return new Promise(async (resolve, reject) => {
 
-    const exportApi = https.request(exportAPI, response => {
-      const exportDir = path.join(__dirname, 'exports');
-      if (!fs.existsSync(exportDir)) {
-        fs.mkdirSync(exportDir);
-      }
+    for (let i = 0; i < apiDetails.length; i++) {
+      const exportAPI = {
+        hostname: '127.0.0.1',
+        port: 9443,
+        path: `/api/am/publisher/v4/apis/export?apiId=${apiDetails[i].id}&name=${apiDetails[i].name}&version=${apiDetails[i].version}&provider=${apiDetails[0].provider}&format=YAML`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        rejectUnauthorized: false // -k option
+      };
 
-      const filePath = path.join(exportDir, 'exportAPI.zip');
-      const fileStream = fs.createWriteStream(filePath);
-      response.pipe(fileStream);
-
-      fileStream.on('finish', function () {
-        fileStream.close();
-      });
-    });
-
-    try {
-      const file = path.join(__dirname, 'exports', 'exportAPI.zip');  
-
-      // If the file is a zip archive, extract the api.yaml file
-      if (path.extname(file) === '.zip') {
-        const filePathInsideZip = './api.yaml';
-        const zip = new AdmZip(file);
-        const ExtractedAPIs = path.join(__dirname, 'ExtractedAPIs');
-        zip.extractAllTo(ExtractedAPIs, true);
-        const extractedFiles = fs.readdirSync(ExtractedAPIs);
-        const apiExtractFolderName = extractedFiles.find(file => fs.statSync(path.join(ExtractedAPIs, file)).isDirectory());
-
-        if (!apiExtractFolderName) {
-          console.error('No dynamically created folder found.');
-          process.exit(1);
+      const exportApi = https.request(exportAPI, response => {
+        const exportDir = path.join(__dirname, 'exports');
+        if (!fs.existsSync(exportDir)) {
+          fs.mkdirSync(exportDir);
         }
-        const fileInsideZipPath = path.join(ExtractedAPIs, apiExtractFolderName, filePathInsideZip);
-        validateApi(fileInsideZipPath);
 
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    };
+        const filePath = path.join(exportDir, `exportAPI_${i}.zip`);
+        const fileStream = fs.createWriteStream(filePath);
+        response.pipe(fileStream);
 
-    exportApi.on('error', error => {
-      console.error('Error:', error);
-    });
+        fileStream.on('finish', async function () {
+          fileStream.close();
 
-    exportApi.end();
 
+          try {
+            const file = path.join('exports', `exportAPI_${i}.zip`);
+
+            // If the file is a zip archive, extract the api.yaml file
+            if (path.extname(file) === '.zip') {
+              const filePathInsideZip1 = './api.yaml';
+              const filePathInsideZip2 = './Definitions/swagger.yaml';
+              const extractedAPIs = 'extractedAPIs';
+              if (!fs.existsSync(extractedAPIs)) {
+                fs.mkdirSync(extractedAPIs);
+              }
+              const zip = new AdmZip(file);
+              zip.extractAllTo(extractedAPIs, true);
+              const apiExtractFolderName = `${apiDetails[i].name}-${apiDetails[i].version}`;
+              if (!apiExtractFolderName) {
+                console.error('No dynamically created folder found.');
+                process.exit(1);
+              }
+              const fileInsideZipPath1 = path.join(extractedAPIs, apiExtractFolderName, filePathInsideZip1);
+              const fileInsideZipPath2 = path.join(extractedAPIs, apiExtractFolderName, filePathInsideZip2);
+              const rulesetPath1 = path.join(__dirname, 'api_rules.yaml');
+              const rulesetPath2 = path.join(__dirname, 'swagger_rules.yaml');
+              let validationMessages1 = '';
+              let validationMessages2 = '';
+
+              const timeStamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+              const reports = 'reports';
+              if (!fs.existsSync(reports)) {
+                fs.mkdirSync(reports);
+              }
+
+              if (apiOption == 'all') {
+                validationMessages1 = await validateApi(fileInsideZipPath1, rulesetPath1);
+                validationMessages2 = await validateApi(fileInsideZipPath2, rulesetPath2);
+                const prefixedMessages = [`${apiDetails[i].name}-${apiDetails[i].version}`].concat(validationMessages1).concat(validationMessages2);
+                await appendToLogFile((prefixedMessages.join('\n') + '\n'), `${reports}/Report_${timeStamp}.log`);
+
+              }
+              else if (apiOption === apiDetails[i].name) {
+                validationMessages1 = await validateApi(fileInsideZipPath1, rulesetPath1);
+                validationMessages2 = await validateApi(fileInsideZipPath2, rulesetPath2);
+                const prefixedMessages = [`${apiDetails[i].name}-${apiDetails[i].version}`].concat(validationMessages1).concat(validationMessages2);
+                await appendToLogFile((prefixedMessages.join('\n') + '\n'), `Report_${apiDetails[i].name}-${apiDetails[i].version}_${timeStamp}.log`);
+              }
+            }
+          } catch (err) {
+            console.error('Error:', err);
+          };
+        });
+      });
+
+      exportApi.on('error', error => {
+        console.error('Error:', error);
+      });
+
+      exportApi.end();
+
+    }
+    resolve();
   });
 }
 
-async function validateApi(apiFile) {
+// function to append messages to the log file
+async function appendToLogFile(message, filePath) {
+  try {
+    await fs.promises.appendFile(filePath, message);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function validateApi(apiFile, rulesetPath) {
   const spectral = new Spectral();
-  const rulesetPath = path.join(__dirname, '.spectral.yaml');
   // Load and set the ruleset
   spectral.setRuleset(
     await bundleAndLoadRuleset(rulesetPath, { fs, fetch })
@@ -129,21 +175,30 @@ async function validateApi(apiFile) {
   const apiSpec = fs.readFileSync(path.resolve(apiFile), 'utf8');
   const results = await spectral.run(apiSpec);
 
+  const messages = [];
   if (results.length === 0) {
-    console.log('API validation successful');
+    // console.log('API validation successful');
+    // await appendToLogFile('API validation successful\n'); 
+
   } else {
-    console.error('API validation failed');
-    results.forEach((result) => {
-      console.error(`${result.code}: ${result.message} at ${result.path.join('.')}`);
-    });
+    // console.error('API validation failed');
+    for (const result of results) {
+      messages.push(`${result.code}: ${result.message} at ${result.path.join('.')}`);
+    }
+  }
+  return messages;
+}
+
+async function main(options) {
+  const userOptions = program.opts(); // access user inputs from command line
+  console.log("CLI tool to Validate APIs")
+
+  const apiDetails = await getApiDetails(userOptions?.token);
+  if (options.all) {
+    await exportApis(apiDetails, userOptions?.token, 'all');
+  }
+  else if (options.api.length > 0 && options.api) {
+    await exportApis(apiDetails, userOptions?.token, options.api);
   }
 }
 
-async function main() {
-  console.log("CLI tool to Validate APIs")
-  const apiDetails = await getApiDetails(userOptions.token);
-  // validateApi('/home/tharani/Downloads/spectral/api.yaml');
-  await exportApis(apiDetails, userOptions.token);
-}
-
-main().catch(console.error);
