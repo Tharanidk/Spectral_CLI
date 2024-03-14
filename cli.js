@@ -15,9 +15,17 @@ program
   .requiredOption('-t, --token <type>', 'Bearer token')
   .command('validate')
   .description('Validate APIs')
-  .option('--api <apiName>', 'Validate a specific API by name')
+  .option('--api <apiNameAndVersion>', 'Validate a specific API by name and version')
   .option('--all', 'Validate all APIs', false) // default value for --all is false
   .action(async (options) => {
+    if(options.api) {
+      const [apiName, apiVersion] = options.api.split(':');
+      if (!apiName || !apiVersion) {
+        console.error('Invalid API name and version');
+        process.exit(1);
+      }
+      options.api = { name: apiName, version: apiVersion };
+    }
     await main(options).catch(console.error);
   });
 
@@ -65,7 +73,6 @@ async function getApiDetails(token) {
 }
 
 async function exportApis(apiDetails, token, apiOption) {
-  console.log(apiOption);
   return new Promise(async (resolve, reject) => {
 
     for (let i = 0; i < apiDetails.length; i++) {
@@ -119,24 +126,27 @@ async function exportApis(apiDetails, token, apiOption) {
               let validationMessages1 = '';
               let validationMessages2 = '';
 
-              const timeStamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
+              const date = new Date(Date.now());
+              const timeStamp = date.getDate() + '-' + (date.getMonth() + 1) + '-' + date.getFullYear() + '_' + date.getHours() + '-' + date.getMinutes() + '-' + date.getSeconds();
+
+              //const timeStamp = new Date().toISOString().replace(/T/, '_').replace(/\..+/, '').replace(/:/g, '-');
               const reports = 'reports';
               if (!fs.existsSync(reports)) {
                 fs.mkdirSync(reports);
               }
 
-              if (apiOption == 'all') {
+              if (apiOption === true) {
                 validationMessages1 = await validateApi(fileInsideZipPath1, rulesetPath1);
                 validationMessages2 = await validateApi(fileInsideZipPath2, rulesetPath2);
                 const prefixedMessages = [`${apiDetails[i].name}-${apiDetails[i].version}`].concat(validationMessages1).concat(validationMessages2);
                 await appendToLogFile((prefixedMessages.join('\n') + '\n'), `${reports}/Report_${timeStamp}.log`);
 
               }
-              else if (apiOption === apiDetails[i].name) {
+              else if (apiOption.name === apiDetails[i].name && apiOption.version === apiDetails[i].version) {
                 validationMessages1 = await validateApi(fileInsideZipPath1, rulesetPath1);
                 validationMessages2 = await validateApi(fileInsideZipPath2, rulesetPath2);
                 const prefixedMessages = [`${apiDetails[i].name}-${apiDetails[i].version}`].concat(validationMessages1).concat(validationMessages2);
-                await appendToLogFile((prefixedMessages.join('\n') + '\n'), `Report_${apiDetails[i].name}-${apiDetails[i].version}_${timeStamp}.log`);
+                await appendToLogFile((prefixedMessages.join('\n') + '\n'), `${reports}/Report_${apiDetails[i].name}-${apiDetails[i].version}_${timeStamp}.log`);
               }
             }
           } catch (err) {
@@ -177,7 +187,7 @@ async function validateApi(apiFile, rulesetPath) {
 
   const messages = [];
   if (results.length === 0) {
-    // console.log('API validation successful');
+     console.log('API validation successful');
     // await appendToLogFile('API validation successful\n'); 
 
   } else {
@@ -195,9 +205,9 @@ async function main(options) {
 
   const apiDetails = await getApiDetails(userOptions?.token);
   if (options.all) {
-    await exportApis(apiDetails, userOptions?.token, 'all');
+    await exportApis(apiDetails, userOptions?.token, options.all);
   }
-  else if (options.api.length > 0 && options.api) {
+  else if (options.api) {
     await exportApis(apiDetails, userOptions?.token, options.api);
   }
 }

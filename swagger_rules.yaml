@@ -1,3 +1,5 @@
+#This file contains the rules that will be used to validate the APIs using the details given in the swagger.yaml file.
+
 rules:
 # Governance around API Specification
   request-schema:

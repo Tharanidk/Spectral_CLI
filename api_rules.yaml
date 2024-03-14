@@ -1,3 +1,5 @@
+#This file contains the rules that will be used to validate the APIs using the details given in the api.yaml file
+
 rules:
 #Governance on Access control for the API
   access-control-check:
