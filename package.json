@@ -30,7 +30,8 @@
       "exports/**",
       "extractedAPIs/**",
       "reports/**",
-      "rules/**"
+      "rules/**",
+      "Readme.md"
     ]
   }
 }

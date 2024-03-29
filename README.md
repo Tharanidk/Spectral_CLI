@@ -12,32 +12,33 @@ User:
   clientSecret: <generated_client_secret>
 Server:
   hostname: <server_host>
+   port: <port>
 ```
 
 ## Usage
 
 The below commands can be used to validate API(s)
 
-01. Validate all apis at once
+01. Validate all APIs at once
 
-`./cli.js validate  --all`
+`./api-governance-cli-tool-linux validate  --all`
 
-02. Validate one API by giving API name and API version
+02. Validate one API by giving API ID.
 
-`./cli.js validate --api <API ID>`
+`./api-governance-cli-tool-linux validate --api <API ID>`
 
 
-## Customizing the  Rules
+## Customizing the Rules
 
-The rules are categorized based on the aspects they validate:
+The rules defined in the rules/rules.yaml file are categorized based on the aspects they validate:
 
-- Type 1 Rules: Validate API(s) using the details provided in `api.yaml`file.
-- Type 2 Rules: Validate API(s) using the details provided in `swagger.yaml` file.
-- Type 3 Rules: Validate API(s) using the details provided in `docs.yaml`.
+- API_Rules: Validate API(s) using the details provided in `api.yaml`file.
+- Swagger_Rules: Validate API(s) using the details provided in `swagger.yaml` file.
+- Docs_Rules: Validate API(s) using the details provided in `docs.yaml`file which is created inside each API when extracting.
 
 ### Example Rule Definition
 
-Here's how you can define a custom rule in api_rules.yaml:
+Here's how you can define a custom rule in API_Rules:
 
 ```
   <rule_name>:
@@ -52,3 +53,6 @@ Here's how you can define a custom rule in api_rules.yaml:
         notMatch: "<matching_parameter>"
          min: <minimum_amount_to_check>
 ```
+## Violation Report
+
+You can find the violation reports inside `reports` folder with the timestmp and date.

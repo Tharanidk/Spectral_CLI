@@ -43,23 +43,38 @@ program
 program.parse(process.argv);
 
 async function askQuestion(query) {
-  const rl = readline.createInterface({
+  var rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  return new Promise(resolve => rl.question(query, ans => {
+  rl.stdoutMuted = false;
+  let promptLength = query.length;
+
+  rl._writeToOutput = function (stringToWrite) {
+    if (!rl.stdoutMuted) {
+      rl.output.write(stringToWrite);
+      if (stringToWrite.substring(0, promptLength) === query) {
+        if (query.includes('password') || query.includes('secret')) {
+          rl.stdoutMuted = true;
+        }
+      }
+    }
+  }
+
+return new Promise((resolve) => {
+  rl.question(query, (ans) => {
     rl.close();
     resolve(ans);
-  }));
+  });
+});
 }
 
+
 async function loadConfig() {
-  let configDetails = '';
   try {
     const fileContents = fs.readFileSync('config.yaml', 'utf8');
     config = yaml.load(fileContents);
-    // console.log(configDetails);
 
     // Define the configuration fields to check and prompt if necessary
     const fieldsToCheck = [
@@ -77,7 +92,6 @@ async function loadConfig() {
         setValueByPath(config, field.key, answer);
       }
     }
-
   } catch (error) {
     console.error('Error reading the config file:', error);
     process.exit(1);
@@ -95,19 +109,19 @@ function setValueByPath(obj, path, value) {
       o[k] = value;
       return value;
     }
-    return o[k] = o[k] || {};
+    return (o[k] = o[k] || {});
   }, obj);
 }
 
 
 function requestApiDetails(options) {
   return new Promise((resolve, reject) => {
-    const req = https.request(options, response => {
+    const req = https.request(options, (response) => {
       let data = '';
-      response.on('data', chunk => data += chunk);
+      response.on('data', (chunk) => (data += chunk));
       response.on('end', () => resolve(JSON.parse(data)));
     });
-    req.on('error', error => reject(error));
+    req.on('error', (error) => reject(error));
     req.end();
   });
 }
@@ -131,9 +145,9 @@ async function getApiDetails(token, apiId) {
       path: apiId ? `/api/am/publisher/v4/apis/${apiId}` : `/api/am/publisher/v4/apis?limit=${limit}&offset=${offset}`,
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-      rejectUnauthorized: false // Equivalent to -k option in curl
+      rejectUnauthorized: false, // Equivalent to -k option in curl
     };
     try {
       const apiResponse = await requestApiDetails(listAPI);
@@ -148,19 +162,21 @@ async function getApiDetails(token, apiId) {
           businessOwner: api.businessOwner,
           businessOwnerEmail: api.businessOwnerEmail,
           technicalOwner: api.technicalOwner,
-          technicalOwnerEmail: api.technicalOwnerEmail
+          technicalOwnerEmail: api.technicalOwnerEmail,
         }));
       } else {
-        apis = [{
-          id: apiResponse.id,
-          name: apiResponse.name,
-          version: apiResponse.version,
-          provider: apiResponse.provider,
-          businessOwner: apiResponse.businessInformation?.businessOwner,
-          businessOwnerEmail: apiResponse.businessInformation?.businessOwnerEmail,
-          technicalOwner: apiResponse.businessInformation?.technicalOwner,
-          technicalOwnerEmail: apiResponse.businessInformation?.technicalOwnerEmail
-        }];
+        apis = [
+          {
+            id: apiResponse.id,
+            name: apiResponse.name,
+            version: apiResponse.version,
+            provider: apiResponse.provider,
+            businessOwner: apiResponse.businessInformation?.businessOwner,
+            businessOwnerEmail: apiResponse.businessInformation?.businessOwnerEmail,
+            technicalOwner: apiResponse.businessInformation?.technicalOwner,
+            technicalOwnerEmail: apiResponse.businessInformation?.technicalOwnerEmail,
+          },
+        ];
       }
       totalApiList.push(...apis);
       count = apis.length;
@@ -175,14 +191,19 @@ async function getApiDetails(token, apiId) {
 
 async function exportApis(apiDetails, token) {
   const date = new Date(Date.now());
-  const timeStamp = date.getDate() + '-' + (date.getMonth() + 1) + '-' +
-    date.getFullYear() + '_' + date.getHours() + '-' +
-    date.getMinutes() + '-' + date.getSeconds();
-  const reports = 'reports';
+  const timeStamp =
+    date.getDate() + "-" +
+    (date.getMonth() + 1) + "-" +
+    date.getFullYear() + "_" +
+    date.getHours() + "-" +
+    date.getMinutes() + "-" +
+    date.getSeconds();
+  const reports = "reports";
   ensureDirectoryExists(reports);
 
   const csvFilePath = path.join(reports, `Violation_Report_${timeStamp}.csv`);
-  let csvHeader = `"Provider","API Name","Version","ID","Business Owner","Business Owner Email","Technical Owner",` +
+  let csvHeader =
+    `"Provider","API Name","Version","ID","Business Owner","Business Owner Email","Technical Owner",` +
     `"Technical Owner Email","Violation Type","Violations"\n`;
   let csvRows = [];
   let apiCsvRows = [];
@@ -194,12 +215,12 @@ async function exportApis(apiDetails, token) {
       path: `/api/am/publisher/v4/apis/export?apiId=${apiDetails[i].id}&format=YAML`,
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
-      rejectUnauthorized: false // -k option
+      rejectUnauthorized: false, // -k option
     };
 
-    const exportApi = await https.request(exportAPI, response => {
+    const exportApi = await https.request(exportAPI, (response) => {
       const exportDir = path.join(process.cwd(), 'exports');
       const filePath = path.join(exportDir, `exportAPI_${i}.zip`);
       const fileStream = fs.createWriteStream(filePath);
@@ -225,8 +246,7 @@ async function exportApis(apiDetails, token) {
               console.error('No dynamically created folder found.');
               process.exit(1);
             }
-            const documentpath = path.join(
-              extractedAPIs, apiExtractFolderName, 'Docs');
+            const documentpath = path.join(extractedAPIs, apiExtractFolderName, 'Docs');
             let docsCount = 0;
 
             if (fs.existsSync(documentpath)) {
@@ -238,8 +258,8 @@ async function exportApis(apiDetails, token) {
 
             const docYaml = yaml.dump({
               documents: {
-                count: docsCount
-              }
+                count: docsCount,
+              },
             });
 
             // create docs.yaml
@@ -306,7 +326,7 @@ async function exportApis(apiDetails, token) {
       });
     });
 
-    exportApi.on('error', error => {
+    exportApi.on('error', (error) => {
       console.error('Error:', error);
     });
 
@@ -326,14 +346,14 @@ async function validateApi(apiFile, rulesetPath) {
 
   const messages = [];
   if (results.length > 0) {
-    results.forEach(result => {
+    results.forEach((result) => {
       messages.push(`${result.code}: ${result.message} at ${result.path.join('.')}`);
     });
   }
   return messages;
 }
 async function getAccessToken() {
-  const clientDetails = Buffer.from(`${config.User.clientId}:${config.User.clientSecret}`).toString('base64');
+  const clientDetails = Buffer.from(`${config.User.clientId}:${config.User.clientSecret}`).toString("base64");
   const grantTypes =
     `grant_type=password` +
     `&username=${encodeURIComponent(config.User.username)}` +
@@ -364,62 +384,60 @@ async function getAccessToken() {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Content-Length': Buffer.byteLength(grantTypes)
       },
-      rejectUnauthorized: false // -k option
+      rejectUnauthorized: false, // -k option
     };
+    
     const getToken = https.request(token, response => {
       let data = '';
       response.on('data', chunk => data += chunk);
       response.on('end', () => {
         try {
           const parsedData = JSON.parse(data);
-          if (parsedData.error || response.statusCode !== 200) {
-            reject(new Error(`Authentication failed: ${parsedData.error_description || 'Invalid client ID or client secret.'}`));
+          if (response.statusCode == 400) {
+            reject('Authentication failed: provided username or password is Invalid.');
+          } else if (response.statusCode == 401) {
+            reject('Authentication failed: provided client ID or client secret is Invalid.');
           } else if (parsedData.access_token) {
             resolve(parsedData.access_token);
           } else {
-            reject(new Error('Token not found in the response.'));
+            reject('Token not found in the response.');
           }
         } catch (error) {
-          reject(new Error(`Error parsing the response: ${error.message}`));
+        console.error(`Error parsing the response: ${error.message}`);
+        reject('An error occurred while processing the response.');
         }
       });
     });
-    getToken.on('error', error => {
-      console.error('Error:', error);
-      reject(error);
+    getToken.on('error', (error) => {
+      reject('An error occurred during the request.');
     });
 
     getToken.write(grantTypes);
     getToken.end();
-
   });
 }
 
 function createRuleFiles() {
-  // Loop through each rule type in the loaded rules object
   for (const [type, content] of Object.entries(rules)) {
     const fileName = `rules/${type.toLowerCase().replace('_', '-')}.yaml`;
     const contentToWrite = content.rules ? { rules: content.rules } : {};
-    // Convert the rule content back into a YAML formatted string
     const yamlContent = yaml.dump(contentToWrite);
-    // Write the YAML content to the file
     fs.writeFileSync(fileName, yamlContent, 'utf8');
   }
 }
 
 async function main(options) {
-  console.log("CLI tool to Validate API(s)")
+  console.log("CLI tool to Validate API(s)");
 
   config = await loadConfig();
   const accessToken = await getAccessToken();
 
-  console.log("Fetching API(s)")
+  console.log('\nFetching API(s)');
   const apiDetails = await getApiDetails(accessToken, options.api);
   console.log(`Retrieved API count: ${apiDetails.length}`);
 
   createRuleFiles();
   console.log("Validating API(s)");
   await exportApis(apiDetails, accessToken);
-
 }
 
