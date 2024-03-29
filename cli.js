@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /*
  * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
@@ -17,13 +18,21 @@
  * under the License.
  */
 
-const { program } = require('commander');
+const {
+  program
+} = require('commander');
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
-const { Spectral } = require('@stoplight/spectral-core');
-const { bundleAndLoadRuleset } = require('@stoplight/spectral-ruleset-bundler/with-loader');
-const { fetch } = require('@stoplight/spectral-runtime');
+const {
+  Spectral
+} = require('@stoplight/spectral-core');
+const {
+  bundleAndLoadRuleset
+} = require('@stoplight/spectral-ruleset-bundler/with-loader');
+const {
+  fetch
+} = require('@stoplight/spectral-runtime');
 const https = require('https');
 const yaml = require('js-yaml');
 const rules = yaml.load(fs.readFileSync('rules/rules.yaml', 'utf8'));
@@ -39,7 +48,6 @@ program
     await main(options).catch(console.error);
   });
 
-// Parse the command line arguments
 program.parse(process.argv);
 
 async function askQuestion(query) {
@@ -62,14 +70,13 @@ async function askQuestion(query) {
     }
   }
 
-return new Promise((resolve) => {
-  rl.question(query, (ans) => {
-    rl.close();
-    resolve(ans);
+  return new Promise((resolve) => {
+    rl.question(query, (ans) => {
+      rl.close();
+      resolve(ans);
+    });
   });
-});
 }
-
 
 async function loadConfig() {
   try {
@@ -77,13 +84,31 @@ async function loadConfig() {
     config = yaml.load(fileContents);
 
     // Define the configuration fields to check and prompt if necessary
-    const fieldsToCheck = [
-      { key: ['User', 'username'], prompt: 'Enter your username:' },
-      { key: ['User', 'password'], prompt: 'Enter your password:', type: 'password' },
-      { key: ['User', 'clientId'], prompt: 'Enter your client ID:' },
-      { key: ['User', 'clientSecret'], prompt: 'Enter your client secret:' },
-      { key: ['Server', 'hostname'], prompt: 'Enter your server hostname:' },
-      { key: ['Server', 'port'], prompt: 'Enter your server port:' },
+    const fieldsToCheck = [{
+        key: ['User', 'username'],
+        prompt: 'Enter your username:'
+      },
+      {
+        key: ['User', 'password'],
+        prompt: 'Enter your password:',
+        type: 'password'
+      },
+      {
+        key: ['User', 'clientId'],
+        prompt: 'Enter your client ID:'
+      },
+      {
+        key: ['User', 'clientSecret'],
+        prompt: 'Enter your client secret:'
+      },
+      {
+        key: ['Server', 'hostname'],
+        prompt: 'Enter your server hostname:'
+      },
+      {
+        key: ['Server', 'port'],
+        prompt: 'Enter your server port:'
+      },
     ];
 
     for (const field of fieldsToCheck) {
@@ -128,7 +153,9 @@ function requestApiDetails(options) {
 
 function ensureDirectoryExists(directoryPath) {
   if (!fs.existsSync(directoryPath)) {
-    fs.mkdirSync(directoryPath, { recursive: true });
+    fs.mkdirSync(directoryPath, {
+      recursive: true
+    });
   }
 }
 
@@ -165,18 +192,16 @@ async function getApiDetails(token, apiId) {
           technicalOwnerEmail: api.technicalOwnerEmail,
         }));
       } else {
-        apis = [
-          {
-            id: apiResponse.id,
-            name: apiResponse.name,
-            version: apiResponse.version,
-            provider: apiResponse.provider,
-            businessOwner: apiResponse.businessInformation?.businessOwner,
-            businessOwnerEmail: apiResponse.businessInformation?.businessOwnerEmail,
-            technicalOwner: apiResponse.businessInformation?.technicalOwner,
-            technicalOwnerEmail: apiResponse.businessInformation?.technicalOwnerEmail,
-          },
-        ];
+        apis = [{
+          id: apiResponse.id,
+          name: apiResponse.name,
+          version: apiResponse.version,
+          provider: apiResponse.provider,
+          businessOwner: apiResponse.businessInformation?.businessOwner,
+          businessOwnerEmail: apiResponse.businessInformation?.businessOwnerEmail,
+          technicalOwner: apiResponse.businessInformation?.technicalOwner,
+          technicalOwnerEmail: apiResponse.businessInformation?.technicalOwnerEmail,
+        }, ];
       }
       totalApiList.push(...apis);
       count = apis.length;
@@ -336,11 +361,14 @@ async function exportApis(apiDetails, token) {
 
 async function validateApi(apiFile, rulesetPath) {
   const spectral = new Spectral();
-  // Load and set the ruleset
+
   spectral.setRuleset(
-    await bundleAndLoadRuleset(rulesetPath, { fs, fetch })
+    await bundleAndLoadRuleset(rulesetPath, {
+      fs,
+      fetch
+    })
   );
-  // Load and validate the API file
+
   const apiSpec = fs.readFileSync(path.resolve(apiFile), 'utf8');
   const results = await spectral.run(apiSpec);
 
@@ -352,6 +380,7 @@ async function validateApi(apiFile, rulesetPath) {
   }
   return messages;
 }
+
 async function getAccessToken() {
   const clientDetails = Buffer.from(`${config.User.clientId}:${config.User.clientSecret}`).toString("base64");
   const grantTypes =
@@ -386,7 +415,7 @@ async function getAccessToken() {
       },
       rejectUnauthorized: false, // -k option
     };
-    
+
     const getToken = https.request(token, response => {
       let data = '';
       response.on('data', chunk => data += chunk);
@@ -403,8 +432,8 @@ async function getAccessToken() {
             reject('Token not found in the response.');
           }
         } catch (error) {
-        console.error(`Error parsing the response: ${error.message}`);
-        reject('An error occurred while processing the response.');
+          console.error(`Error parsing the response: ${error.message}`);
+          reject('An error occurred while processing the response.');
         }
       });
     });
@@ -420,7 +449,9 @@ async function getAccessToken() {
 function createRuleFiles() {
   for (const [type, content] of Object.entries(rules)) {
     const fileName = `rules/${type.toLowerCase().replace('_', '-')}.yaml`;
-    const contentToWrite = content.rules ? { rules: content.rules } : {};
+    const contentToWrite = content.rules ? {
+      rules: content.rules
+    } : {};
     const yamlContent = yaml.dump(contentToWrite);
     fs.writeFileSync(fileName, yamlContent, 'utf8');
   }
@@ -439,5 +470,5 @@ async function main(options) {
   createRuleFiles();
   console.log("Validating API(s)");
   await exportApis(apiDetails, accessToken);
+  console.log("Validation completed. Check the reports folder for the validation report.");
 }
-
